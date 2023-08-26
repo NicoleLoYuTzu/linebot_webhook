@@ -1,131 +1,51 @@
-// const express = require('express')
-// const middleware = require('@line/bot-sdk').middleware
-// const ngrok = require('ngrok');
-// const crypto = require("crypto");
 
-
-// // Compare x-line-signature request header and the signature
-
-
-// const JSONParseError = require('@line/bot-sdk').JSONParseError
-// const SignatureValidationFailed = require('@line/bot-sdk').SignatureValidationFailed
-
-// const app = express()
-
-// const config = {
-//     channelSecret: '4e04307c30eedcd1e301b88cff561098', // 替换为您的Channel Secret
-//     channelAccessToken: "W9Q1V8OHyMXA4CZ3iYwlr7U78PjOlHYmRPIrJlDkdJKrdCrtrR1CVnqE9cGqG3muIHfXrjQLrAI1K9PKj0Lf24QLd/wXl4P07hL258/FTVxYkndQu0cnSDfToIRo2ZlmSAvH0wSddSOYW+QO0/eTZwdB04t89/1O/w1cDnyilFU=" // 替换为您的Channel Access Token
-// }
-
-// app.use(middleware(config))
-// app.post('/webhook', (req, res) => {
-//     const channelSecret = '4e04307c30eedcd1e301b88cff561098'; // 替换为您的 Channel Secret
-//     const body = JSON.stringify(req.body); // 获取请求体并转换为 JSON 字符串
-//     console.log('Received webhook:', req.body);
-//     const signature = crypto
-//       .createHmac("SHA256", channelSecret)
-//       .update(body)
-//       .digest("base64");
-    
-//     // 获取 x-line-signature 请求头
-//     const headerSignature = req.get('x-line-signature');
-//     console.log('Header Signature:', headerSignature);
-//     console.log(' Signature:', signature);
-//     // 比较签名
-//     if (signature === headerSignature) {
-//         console.log('Header Signature:', headerSignature);
-//       // 签名匹配，请求是有效的
-//       // 在这里处理您的 LINE Bot 逻辑
-//       res.sendStatus(200);
-//     } else {
-//       // 签名不匹配，请求无效
-//       console.log('Header Signature:', headerSignature);
-//       res.sendStatus(401);
-//     }
-// });
-
-
-// app.get('/', (req, res) => {
-//     res.send('Hello World!')
-//   })
-
-
-// app.use((err, req, res, next) => {
-    
-// console.log('Computed Signature:', err.signature);
-//     if (err instanceof SignatureValidationFailed) {
-//       res.status(401).send(err.signature)
-//       return
-//     } else if (err instanceof JSONParseError) {
-//       res.status(400).send(err.raw)
-//       return
-//     }
-//     next(err) // will throw default 500
-//   })
-
-
-// app.listen(8080, () => {
-//     // 启动 ngrok 隧道
-//     (async function () {
-//       try {
-//         const url = await ngrok.connect(8080); // 将端口号替换为您的 Express.js 服务器端口号
-//         console.log(`Public URL: ${url}`);
-//       } catch (error) {
-//         console.error('Error starting ngrok:', error);
-//       }
-//     })();
-//     console.log('Server is running on port 8080');
-  
-
-
-//   });
-  
-const crypto = require( 'crypto' );
-const middleware = require('@line/bot-sdk').middleware
-const express = require( 'express' );
+// 建立express伺服器
+const express = require("express");
 const app = express();
 
-const API_SECRET = 'secret';
+// 引用linebot SDK
+var linebot = require("linebot");
 
-const config = {
-    channelSecret: '4e04307c30eedcd1e301b88cff561098', // 替换为您的Channel Secret
-    channelAccessToken: "W9Q1V8OHyMXA4CZ3iYwlr7U78PjOlHYmRPIrJlDkdJKrdCrtrR1CVnqE9cGqG3muIHfXrjQLrAI1K9PKj0Lf24QLd/wXl4P07hL258/FTVxYkndQu0cnSDfToIRo2ZlmSAvH0wSddSOYW+QO0/eTZwdB04t89/1O/w1cDnyilFU=" // 替换为您的Channel Access Token
-}
+// 用於辨識Line Channel的資訊
 
-app.use( express.json( { verify: ( req, res, buffer ) => { req.rawBody = buffer; } } ) );
-app.use(middleware(config));
-
-app.get('/', (req, res) => {
-    res.send('Hello World!')
-  })
-
-app.post( '/', ( req, res ) => {
-    const signature = _generateSignature( req.method, req.url, req.headers[ 'x-cs-timestamp' ], req.rawBody );
-
-    if ( signature !== req.headers[ 'x-cs-signature' ] ) {
-        return res.sendStatus( 401 );
-    }
-
-    console.log( 'received webhook', req.body );
-    res.sendStatus( 200 );
-} );
-
-const port = 81; // 指定端口号
-
-app.listen(port, () => {
-    console.log(`Node.js server started on port ${port}.`);
+var bot = linebot({
+    channelId: "2000515389",
+    channelSecret: "4e04307c30eedcd1e301b88cff561098",
+    channelAccessToken: "W9Q1V8OHyMXA4CZ3iYwlr7U78PjOlHYmRPIrJlDkdJKrdCrtrR1CVnqE9cGqG3muIHfXrjQLrAI1K9PKj0Lf24QLd/wXl4P07hL258/FTVxYkndQu0cnSDfToIRo2ZlmSAvH0wSddSOYW+QO0/eTZwdB04t89/1O/w1cDnyilFU="
 });
 
+const linebotParser = bot.parser();
 
-function _generateSignature( method, url, timestamp, body ) {
-    const hmac = crypto.createHmac( 'SHA256', API_SECRET );
-
-    hmac.update( `${ method.toUpperCase() }${ url }${ timestamp }` );
-
-    if ( body ) {
-        hmac.update( body );
+// 當有人傳送訊息給Bot時
+bot.on("message", function (event) {
+    // event.message.text是使用者傳給bot的訊息
+    const introRegex = /你|誰|介紹|you|yourself|hello|你好|hi/gi;
+    const resumeRegex = /resume|履歷|cv/gi;
+    const blogRegex = /blog|部落格|文章/gi;
+    const userText = event.message.text;
+    if (introRegex.test(userText)) {
+      event.reply(
+        "你好！我是Danny，一個外向、口條流利、良好外語能力、學習快速的網頁前端工程師，有著兩年React & Typescript的開發經驗，熱衷新功能開發同時優化既有程式碼提高使用者與開發者體驗。由於過去商管背景，有著很好的溝通協調能力，善於與不同專業領域的夥伴合作。對於程式開發與協助他人成長有著極高的熱情，喜愛透過線上資源以及實務開發學習，鑽研各種前、後端技術持續精進自己的能力，同時透過文章與活動分享所學並提供協助，期望能將學習的成就感帶給更多人。"
+      );
+    } else if (resumeRegex.test(userText)) {
+      event.reply(
+        "以下是我目前的最新履歷以及linkedIn檔案，正在尋找中高階的前端工程師職位，歡迎隨時與我聯繫 \n\n中文履歷: https://www.cakeresume.com/s03411-6bb584\n\n英文履歷: https://www.cakeresume.com/s--vUgkMAempqZ4kcWeTtVG0Q--/s03411-e4dedd-eafe49\n\nLinkedIn頁面: https://www.linkedin.com/in/danny-wang-3b7471114/"
+      );
+    } else if (blogRegex.test(userText)) {
+      event.reply(
+        "以下是我的部落格連結，主要發布一些新手教學、專案筆記以及求職紀錄\n\n部落格連結: https://eruditeness.news.blog/"
+      );
+    } else {
+      event.reply(
+        "不知道該問什麼嗎？ 歡迎透過以下的關鍵字與我互動！\n\n介紹/履歷/部落格"
+      );
     }
+  });
 
-    return hmac.digest( 'hex' );
-}
+// 送出帶有line-bot需要資訊的POST請求
+app.post("/", linebotParser);
 
+// 啟動express server
+app.listen(process.env.PORT || 80, () => {
+  console.log("Express server start");
+});
